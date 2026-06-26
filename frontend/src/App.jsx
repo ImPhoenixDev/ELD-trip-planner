@@ -3,6 +3,7 @@ import TripForm from "./components/TripForm";
 import MapView from "./components/MapView";
 import LogSheet from "./components/LogSheet";
 import Summary from "./components/Summary";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { STATUS_ROWS } from "./lib/constants";
 import { planTrip } from "./lib/api";
 
@@ -112,30 +113,32 @@ export default function App() {
             )}
 
             {data && (
-              <>
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
-                  <div className="h-[380px] sm:h-[440px]">
-                    <MapView data={data} />
+              <ErrorBoundary>
+                <div className="space-y-6">
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+                    <div className="h-[380px] sm:h-[440px]">
+                      <MapView data={data} />
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-sm font-bold text-slate-900">
-                      Daily log sheets
-                      <span className="ml-2 font-normal text-slate-500">
-                        {data.logs.length} day{data.logs.length > 1 ? "s" : ""}
-                      </span>
-                    </h2>
-                    <Legend />
-                  </div>
-                  <div className="space-y-4">
-                    {data.logs.map((log) => (
-                      <LogSheet key={log.day} log={log} />
-                    ))}
+                  <div>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <h2 className="text-sm font-bold text-slate-900">
+                        Daily log sheets
+                        <span className="ml-2 font-normal text-slate-500">
+                          {data.logs.length} day{data.logs.length > 1 ? "s" : ""}
+                        </span>
+                      </h2>
+                      <Legend />
+                    </div>
+                    <div className="space-y-4">
+                      {data.logs.map((log) => (
+                        <LogSheet key={log.day} log={log} />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </>
+              </ErrorBoundary>
             )}
           </div>
         </div>
