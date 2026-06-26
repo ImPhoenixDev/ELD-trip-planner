@@ -163,14 +163,22 @@ export default function LogSheet({ log }) {
           </div>
         </div>
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
+        <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+          <Field label="From" value={log.from_location} />
+          <Field label="To" value={log.to_location} />
+        </dl>
+
+        <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
           <Field label="Total miles driving today" value={`${totalMiles.toLocaleString()} mi`} />
+          <Field label="Total mileage today" value={`${totalMiles.toLocaleString()} mi`} />
           <Field label="Total on-duty" value={`${log.total_on_duty?.toFixed(2)} h`} />
           <Field label="Carrier" value="" />
           <Field label="Main office address" value="" />
+          <Field label="Home terminal address" value="" />
           <Field label="Truck / tractor & trailer no." value="" />
-          <Field label="Shipping doc no. / commodity" value="" />
           <Field label="Co-driver" value="None" />
+          <Field label="DVL / manifest no." value="" />
+          <Field label="Shipper & commodity" value="" />
           <Field label="24-hour period starting time" value="Midnight (00:00)" />
         </dl>
       </div>
@@ -205,6 +213,19 @@ export default function LogSheet({ log }) {
         </div>
       )}
 
+      {log.recap && (
+        <div className="mt-3 border-t border-slate-200 pt-3">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Recap <span className="font-normal normal-case text-slate-400">(70 hr / 8 day cycle)</span>
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <Recap label="On duty today" value={log.recap.on_duty_today} />
+            <Recap label="Total last 8 days" value={log.recap.total_on_duty_8day} />
+            <Recap label="Available tomorrow" value={log.recap.available_tomorrow} />
+          </div>
+        </div>
+      )}
+
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-slate-200 pt-3 text-[11px] text-slate-500">
         <span>I certify that these entries are true and correct.</span>
         <span className="min-w-[160px] flex-1 border-b border-slate-300 text-right text-slate-400">
@@ -225,6 +246,15 @@ function Field({ label, value }) {
       <dd className="border-b border-slate-200 pb-0.5 font-medium text-slate-800">
         {value || <span className="text-slate-300">—</span>}
       </dd>
+    </div>
+  );
+}
+
+function Recap({ label, value }) {
+  return (
+    <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+      <div className="text-sm font-bold text-slate-900">{(value ?? 0).toFixed(2)} h</div>
+      <div className="text-[10px] uppercase tracking-wide text-slate-400">{label}</div>
     </div>
   );
 }

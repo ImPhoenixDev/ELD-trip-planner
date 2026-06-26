@@ -36,6 +36,7 @@ const EMPTY = {
   pickup_location: "",
   dropoff_location: "",
   current_cycle_used: "",
+  start_time: "",
 };
 
 const FIELDS = [
@@ -55,6 +56,7 @@ export default function TripForm({ onSubmit, loading, fieldErrors }) {
     onSubmit({
       ...values,
       current_cycle_used: values.current_cycle_used === "" ? 0 : Number(values.current_cycle_used),
+      start_time: values.start_time || undefined,
     });
   };
 
@@ -89,6 +91,20 @@ export default function TripForm({ onSubmit, loading, fieldErrors }) {
         {fieldErrors?.current_cycle_used && (
           <p className="mt-1 text-xs text-red-600">{fieldErrors.current_cycle_used}</p>
         )}
+      </div>
+
+      <div>
+        <label className="field-label" htmlFor="start_time">
+          Departure date &amp; time <span className="font-normal text-slate-400">(optional)</span>
+        </label>
+        <input
+          id="start_time"
+          className="field-input"
+          type="datetime-local"
+          value={values.start_time}
+          onChange={update("start_time")}
+        />
+        <p className="mt-1 text-[11px] text-slate-400">Defaults to 8:00 AM today if left blank.</p>
       </div>
 
       <button
