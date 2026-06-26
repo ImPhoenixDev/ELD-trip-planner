@@ -66,6 +66,8 @@ def _attach_locations(plan, geometry, leg_a_miles, total_miles, places):
     for stop in plan.get("stops", []):
         needed.add(round(stop["miles"]))
     for log in plan.get("logs", []):
+        needed.add(round(log.get("start_miles", 0)))
+        needed.add(round(log.get("end_miles", 0)))
         for remark in log.get("remarks", []):
             needed.add(round(remark["miles"]))
 
@@ -83,6 +85,8 @@ def _attach_locations(plan, geometry, leg_a_miles, total_miles, places):
     for stop in plan.get("stops", []):
         stop["location"] = cache.get(round(stop["miles"]), "")
     for log in plan.get("logs", []):
+        log["from_location"] = cache.get(round(log.get("start_miles", 0)), "")
+        log["to_location"] = cache.get(round(log.get("end_miles", 0)), "")
         for remark in log.get("remarks", []):
             remark["location"] = cache.get(round(remark["miles"]), "")
 

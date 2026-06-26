@@ -122,6 +122,24 @@ class HOSPlannerTests(SimpleTestCase):
             for a, b in zip(log["entries"], log["entries"][1:]):
                 self.assertEqual(a["end"], b["start"])
 
+    def test_logs_include_recap_and_mileage(self):
+        result = plan_trip(1500, miles_to_minutes(1500), 60, 8, START)
+        for log in result["logs"]:
+            recap = log["recap"]
+            # Recap math: available = 70 - rolling 8-day on-duty total.
+            self.assertAlmostEqual(
+                recap["available_tomorrow"],
+                max(0.0, 70.0 - recap["total_on_duty_8day"]),
+                delta=0.01,
+            )
+            self.assertEqual(recap["on_duty_today"], log["total_on_duty"])
+            # Each day exposes its start/end mileage for the From/To fields.
+            self.assertIn("start_miles", log)
+            self.assertIn("end_miles", log)
+            self.assertGreaterEqual(log["end_miles"], log["start_miles"])
+        # Day 1's rolling total includes the 8 hours already used pre-trip.
+        self.assertGreaterEqual(result["logs"][0]["recap"]["total_on_duty_8day"], 8.0)
+
     def test_zero_distance_is_safe(self):
         result = plan_trip(0, 0, 0, 0, START)
         # Even a degenerate trip should still record pickup + dropoff.

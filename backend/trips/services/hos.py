@@ -242,7 +242,7 @@ def _fmt_clock(dt: datetime) -> str:
     return dt.strftime("%H:%M")
 
 
-def build_logs(segments: List[Segment], start_dt: datetime) -> List[dict]:
+def build_logs(segments: List[Segment], start_dt: datetime, current_cycle_hours: float = 0.0) -> List[dict]:
     """Slice segments into per-day ELD log sheets (midnight to midnight)."""
     if not segments:
         return []
@@ -284,6 +284,8 @@ def build_logs(segments: List[Segment], start_dt: datetime) -> List[dict]:
     logs = []
     day = start_date
     day_index = 1
+    cycle_running = max(current_cycle_hours, 0.0)  # rolling 70hr/8day on-duty total
+    last_miles = 0.0
     while day <= end_date:
         day_start = datetime.combine(day, datetime.min.time())
         day_pieces = [p for p in pieces if p[1].date() == day]
@@ -324,15 +326,46 @@ def build_logs(segments: List[Segment], start_dt: datetime) -> List[dict]:
             entries.append({"status": OFF_DUTY, "start": cursor_min, "end": 24 * 60})
             totals[OFF_DUTY] += (24 * 60 - cursor_min) / 60.0
 
+        # Day start/end mileage (for the From/To fields).
+        if day_pieces:
+            ordered = sorted(day_pieces, key=lambda p: p[1])
+            day_start_miles = ordered[0][5]
+            day_end_miles = ordered[-1][6]
+        else:
+            day_start_miles = day_end_miles = last_miles
+        last_miles = day_end_miles
+
+        # Recap: rolling 70-hour / 8-day on-duty total and hours available tomorrow.
+        on_duty_today = totals[ON_DUTY] + totals[DRIVING]
+        restart_pieces = [p for p in day_pieces if p[4] == "restart"]
+        if restart_pieces:
+            # A 34-hour restart zeroes the cycle; only on-duty time after it counts.
+            restart_end = max(p[2] for p in restart_pieces)
+            cycle_running = sum(
+                (p[2] - p[1]).total_seconds() / 3600.0
+                for p in day_pieces
+                if p[0] in (DRIVING, ON_DUTY) and p[1] >= restart_end
+            )
+        else:
+            cycle_running += on_duty_today
+        available_tomorrow = max(0.0, CYCLE_LIMIT / 60.0 - cycle_running)
+
         logs.append(
             {
                 "day": day_index,
                 "date": day.isoformat(),
                 "entries": entries,
                 "totals": {k: round(v, 2) for k, v in totals.items()},
-                "total_on_duty": round(totals[ON_DUTY] + totals[DRIVING], 2),
+                "total_on_duty": round(on_duty_today, 2),
                 "remarks": remarks,
                 "miles": round(miles_today, 1),
+                "start_miles": round(day_start_miles, 1),
+                "end_miles": round(day_end_miles, 1),
+                "recap": {
+                    "on_duty_today": round(on_duty_today, 2),
+                    "total_on_duty_8day": round(cycle_running, 2),
+                    "available_tomorrow": round(available_tomorrow, 2),
+                },
             }
         )
         day = day + timedelta(days=1)
@@ -397,7 +430,7 @@ def plan_trip(
                 }
             )
 
-    logs = build_logs(planner.segments, start_dt)
+    logs = build_logs(planner.segments, start_dt, current_cycle_hours)
 
     total_drive_hours = round(planner.total_drive_minutes / 60.0, 2)
     total_on_duty_min = sum(s.duration for s in planner.segments if s.status in {DRIVING, ON_DUTY})
