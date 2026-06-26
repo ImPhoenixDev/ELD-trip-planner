@@ -17,6 +17,7 @@ from django.conf import settings
 ORS_BASE = "https://api.openrouteservice.org"
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_REVERSE = "https://nominatim.openstreetmap.org/reverse"
+PHOTON = "https://photon.komoot.io/api/"
 OSRM = "https://router.project-osrm.org/route/v1/driving"
 METERS_PER_MILE = 1609.344
 TIMEOUT = 20
@@ -77,6 +78,96 @@ def _geocode_nominatim(text: str) -> dict:
         "lng": float(top["lon"]),
         "label": top.get("display_name", text),
     }
+
+
+def _autocomplete_ors(text: str, key: str) -> List[dict]:
+    resp = requests.get(
+        f"{ORS_BASE}/geocode/autocomplete",
+        params={"api_key": key, "text": text, "boundary.country": "US", "size": 6},
+        timeout=TIMEOUT,
+    )
+    resp.raise_for_status()
+    out = []
+    for feat in resp.json().get("features") or []:
+        coords = (feat.get("geometry") or {}).get("coordinates")
+        label = (feat.get("properties") or {}).get("label")
+        if coords and label:
+            out.append({"label": label, "lat": coords[1], "lng": coords[0]})
+    return out
+
+
+def _autocomplete_photon(text: str) -> List[dict]:
+    resp = requests.get(
+        PHOTON,
+        params={"q": text, "limit": 6, "lang": "en"},
+        headers={"User-Agent": USER_AGENT},
+        timeout=TIMEOUT,
+    )
+    resp.raise_for_status()
+    out = []
+    for feat in resp.json().get("features") or []:
+        coords = (feat.get("geometry") or {}).get("coordinates")
+        if not coords:
+            continue
+        props = feat.get("properties") or {}
+        name = props.get("name")
+        city = props.get("city")
+        state = _shorten_state(props.get("state", "")) or props.get("state")
+        country = props.get("country")
+        parts, seen = [], set()
+        for part in (name, city if city != name else None, state, country):
+            if part and part not in seen:
+                parts.append(part)
+                seen.add(part)
+        label = ", ".join(parts)
+        if label:
+            out.append({"label": label, "lat": coords[1], "lng": coords[0]})
+    return out
+
+
+def _autocomplete_nominatim(text: str) -> List[dict]:
+    resp = requests.get(
+        NOMINATIM,
+        params={"q": text, "format": "json", "limit": 6},
+        headers={"User-Agent": USER_AGENT},
+        timeout=TIMEOUT,
+    )
+    resp.raise_for_status()
+    return [
+        {"label": r.get("display_name", text), "lat": float(r["lat"]), "lng": float(r["lon"])}
+        for r in resp.json()
+        if r.get("lat") and r.get("lon")
+    ]
+
+
+def autocomplete(text: str) -> List[dict]:
+    """Return up to ~6 location suggestions [{label, lat, lng}] for a partial query.
+
+    Prefers ORS autocomplete (uses the API key, US-biased); falls back to the
+    keyless Photon typeahead service, then Nominatim search.
+    """
+    text = (text or "").strip()
+    if len(text) < 3:
+        return []
+
+    key = settings.ORS_API_KEY
+    if key:
+        try:
+            results = _autocomplete_ors(text, key)
+            if results:
+                return results
+        except (requests.RequestException, KeyError, ValueError, TypeError):
+            pass
+    try:
+        results = _autocomplete_photon(text)
+        if results:
+            return results
+    except (requests.RequestException, KeyError, ValueError, TypeError):
+        pass
+    try:
+        return _autocomplete_nominatim(text)
+    except (requests.RequestException, KeyError, ValueError, TypeError):
+        return []
 
 
 def geocode(text: str) -> dict:

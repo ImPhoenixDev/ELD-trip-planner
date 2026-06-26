@@ -33,4 +33,15 @@ export async function planTrip(payload) {
   return data;
 }
 
+export async function suggestPlaces(query, { signal } = {}) {
+  const q = (query || "").trim();
+  if (q.length < 3) return [];
+  const resp = await fetch(`${BASE_URL}/api/geocode/suggest/?q=${encodeURIComponent(q)}`, {
+    signal,
+  });
+  if (!resp.ok) return [];
+  const data = await resp.json().catch(() => null);
+  return data?.suggestions || [];
+}
+
 export { BASE_URL };

@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from trips.services.geo import (
     GeoError,
+    autocomplete,
     build_cumulative,
     directions,
     geocode,
@@ -30,6 +31,13 @@ def _parse_start(value):
 @api_view(["GET"])
 def health(_request):
     return Response({"status": "ok"})
+
+
+@api_view(["GET"])
+def suggest(request):
+    """Address typeahead suggestions for the trip form."""
+    query = request.GET.get("q", "")
+    return Response({"suggestions": autocomplete(query)})
 
 
 def _attach_locations(plan, geometry, leg_a_miles, total_miles, places):

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import AddressAutocomplete from "./AddressAutocomplete";
 
 const EXAMPLES = [
   {
@@ -47,6 +48,7 @@ export default function TripForm({ onSubmit, loading, fieldErrors }) {
   const [values, setValues] = useState(EMPTY);
 
   const update = (key) => (e) => setValues((v) => ({ ...v, [key]: e.target.value }));
+  const setField = (key) => (val) => setValues((v) => ({ ...v, [key]: val }));
 
   const submit = (e) => {
     e.preventDefault();
@@ -59,20 +61,14 @@ export default function TripForm({ onSubmit, loading, fieldErrors }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       {FIELDS.map((f) => (
-        <div key={f.key}>
-          <label className="field-label" htmlFor={f.key}>
-            {f.label}
-          </label>
-          <input
-            id={f.key}
-            className="field-input"
-            placeholder={f.placeholder}
-            value={values[f.key]}
-            onChange={update(f.key)}
-            autoComplete="off"
-          />
-          {fieldErrors?.[f.key] && <p className="mt-1 text-xs text-red-600">{fieldErrors[f.key]}</p>}
-        </div>
+        <AddressAutocomplete
+          key={f.key}
+          label={f.label}
+          placeholder={f.placeholder}
+          value={values[f.key]}
+          onChange={setField(f.key)}
+          error={fieldErrors?.[f.key]}
+        />
       ))}
 
       <div>
