@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "experimentalServices": {
+    "frontend": {
+      "entrypoint": "frontend",
+      "framework": "vite",
+      "routePrefix": "/"
+    },
+    "backend": {
+      "entrypoint": "backend",
+      "framework": "django",
+      "routePrefix": "/api",
+      "maxDuration": 60
+    }
+  }
+}

@@ -28,6 +28,15 @@ ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").s
 RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+# Vercel (Services / Python runtime) sets VERCEL=1 and VERCEL_URL.
+ON_VERCEL = bool(os.environ.get("VERCEL"))
+if ON_VERCEL:
+    ALLOWED_HOSTS.append(".vercel.app")
+    vercel_url = os.environ.get("VERCEL_URL")
+    if vercel_url:
+        ALLOWED_HOSTS.append(vercel_url)
+
 if DEBUG and not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ["*"]
 
@@ -78,7 +87,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        # On Vercel the project filesystem is read-only; only /tmp is writable.
+        # The API itself is stateless, so this DB is effectively unused.
+        "NAME": "/tmp/db.sqlite3" if ON_VERCEL else BASE_DIR / "db.sqlite3",
     }
 }
 

@@ -1,4 +1,7 @@
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+// Use `??` so an explicitly-empty value (same-origin deploys, e.g. Vercel Services)
+// is respected instead of falling back to localhost.
+const RAW_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const BASE_URL = RAW_BASE.replace(/\/$/, "");
 
 export async function planTrip(payload) {
   let resp;
