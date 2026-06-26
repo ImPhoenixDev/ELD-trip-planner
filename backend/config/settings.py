@@ -21,7 +21,8 @@ SECRET_KEY = os.environ.get(
     "django-insecure-h(vl_2ua6!=&80wqcq*gt7sv2w1nq6ccpabkdfk6b29dmy1m0r",
 )
 
-DEBUG = env_bool("DJANGO_DEBUG", True)
+# Default to production-safe (False). Set DJANGO_DEBUG=True in your local .env.
+DEBUG = env_bool("DJANGO_DEBUG", False)
 
 # Comma-separated list of hosts. Render sets RENDER_EXTERNAL_HOSTNAME.
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()]
@@ -116,6 +117,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    # Public, unauthenticated JSON API — don't pull in session/basic auth.
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    # Per-IP rate limits to protect upstream geocoding quota (ORS/Nominatim).
+    "DEFAULT_THROTTLE_RATES": {
+        "suggest": "40/min",
+        "plan": "15/min",
+    },
 }
 
 # CORS: allow the deployed frontend origin(s).

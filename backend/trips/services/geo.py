@@ -8,11 +8,14 @@ demo server for routing. A final great-circle estimate guarantees a result.
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import List, Tuple
 
 import requests
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 ORS_BASE = "https://api.openrouteservice.org"
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
@@ -156,17 +159,18 @@ def autocomplete(text: str) -> List[dict]:
             results = _autocomplete_ors(text, key)
             if results:
                 return results
-        except (requests.RequestException, KeyError, ValueError, TypeError):
-            pass
+        except (requests.RequestException, KeyError, ValueError, TypeError) as exc:
+            logger.debug("ORS autocomplete failed for %r: %s", text, exc)
     try:
         results = _autocomplete_photon(text)
         if results:
             return results
-    except (requests.RequestException, KeyError, ValueError, TypeError):
-        pass
+    except (requests.RequestException, KeyError, ValueError, TypeError) as exc:
+        logger.debug("Photon autocomplete failed for %r: %s", text, exc)
     try:
         return _autocomplete_nominatim(text)
-    except (requests.RequestException, KeyError, ValueError, TypeError):
+    except (requests.RequestException, KeyError, ValueError, TypeError) as exc:
+        logger.debug("Nominatim autocomplete failed for %r: %s", text, exc)
         return []
 
 
@@ -180,11 +184,12 @@ def geocode(text: str) -> dict:
     if key:
         try:
             return _geocode_ors(text, key)
-        except (requests.RequestException, GeoError, KeyError, ValueError):
-            pass
+        except (requests.RequestException, GeoError, KeyError, ValueError) as exc:
+            logger.warning("ORS geocode failed for %r (%s); falling back to Nominatim.", text, exc)
     try:
         return _geocode_nominatim(text)
     except (requests.RequestException, GeoError, KeyError, ValueError) as exc:
+        logger.warning("Nominatim geocode failed for %r (%s).", text, exc)
         raise GeoError(f'Could not find a location for "{text}".') from exc
 
 
@@ -274,11 +279,12 @@ def directions(points: List[dict]) -> dict:
     if key:
         try:
             return _route_ors(points, key)
-        except (requests.RequestException, KeyError, IndexError, ValueError):
-            pass
+        except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
+            logger.warning("ORS routing failed (%s); falling back to OSRM.", exc)
     try:
         return _route_osrm(points)
-    except (requests.RequestException, KeyError, IndexError, ValueError):
+    except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
+        logger.warning("OSRM routing failed (%s); using great-circle estimate.", exc)
         return _route_fallback(points)
 
 
@@ -332,11 +338,12 @@ def reverse_geocode(lat: float, lng: float):
             result = _reverse_ors(lat, lng, key)
             if result:
                 return result
-        except (requests.RequestException, KeyError, IndexError, ValueError):
-            pass
+        except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
+            logger.debug("ORS reverse geocode failed at (%s, %s): %s", lat, lng, exc)
     try:
         return _reverse_nominatim(lat, lng)
-    except (requests.RequestException, KeyError, IndexError, ValueError):
+    except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
+        logger.debug("Nominatim reverse geocode failed at (%s, %s): %s", lat, lng, exc)
         return None
 
 

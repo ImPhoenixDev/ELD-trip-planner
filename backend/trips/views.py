@@ -4,8 +4,19 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
+
+MAX_LOCATION_LEN = 160
+
+
+class SuggestRateThrottle(AnonRateThrottle):
+    scope = "suggest"
+
+
+class PlanRateThrottle(AnonRateThrottle):
+    scope = "plan"
 
 from trips.services.geo import (
     GeoError,
@@ -34,9 +45,10 @@ def health(_request):
 
 
 @api_view(["GET"])
+@throttle_classes([SuggestRateThrottle])
 def suggest(request):
     """Address typeahead suggestions for the trip form."""
-    query = request.GET.get("q", "")
+    query = request.GET.get("q", "")[:MAX_LOCATION_LEN]
     return Response({"suggestions": autocomplete(query)})
 
 
@@ -80,6 +92,7 @@ def _attach_locations(plan, geometry, leg_a_miles, total_miles, places):
 
 
 @api_view(["POST"])
+@throttle_classes([PlanRateThrottle])
 def plan_trip_view(request):
     data = request.data or {}
     current = (data.get("current_location") or "").strip()
@@ -87,12 +100,15 @@ def plan_trip_view(request):
     dropoff = (data.get("dropoff_location") or "").strip()
 
     errors = {}
-    if not current:
-        errors["current_location"] = "This field is required."
-    if not pickup:
-        errors["pickup_location"] = "This field is required."
-    if not dropoff:
-        errors["dropoff_location"] = "This field is required."
+    for field, value in (
+        ("current_location", current),
+        ("pickup_location", pickup),
+        ("dropoff_location", dropoff),
+    ):
+        if not value:
+            errors[field] = "This field is required."
+        elif len(value) > MAX_LOCATION_LEN:
+            errors[field] = f"Must be at most {MAX_LOCATION_LEN} characters."
 
     try:
         cycle_hours = float(data.get("current_cycle_used", 0) or 0)
