@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { buildCumulative, pointAtMiles } from "../lib/route";
-import { STOP_META, fmtTime } from "../lib/constants";
+import { buildCumulative, pointAtMiles } from "../../lib/route";
+import { STOP_META, fmtTime } from "../../lib/constants";
 
 function pinIcon(meta, big = false) {
   const size = big ? 30 : 24;
@@ -25,7 +25,7 @@ function pinIcon(meta, big = false) {
 
 function FitBounds({ points }) {
   const map = useMap();
-  useMemo(() => {
+  useEffect(() => {
     if (points.length > 0) {
       map.fitBounds(points, { padding: [40, 40] });
     }
@@ -35,7 +35,7 @@ function FitBounds({ points }) {
 
 export default function MapView({ data }) {
   const { route, places, stops } = data;
-  const geometry = route.geometry || [];
+  const geometry = useMemo(() => route.geometry || [], [route.geometry]);
 
   const cum = useMemo(() => buildCumulative(geometry), [geometry]);
 

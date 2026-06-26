@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { STATUS_ROWS, STATUS_INDEX, fmtDate } from "../lib/constants";
+import { STATUS_ROWS, STATUS_INDEX, fmtDate } from "../../lib/constants";
 
 const STATUS_COLOR = Object.fromEntries(STATUS_ROWS.map((r) => [r.key, r.color]));
 

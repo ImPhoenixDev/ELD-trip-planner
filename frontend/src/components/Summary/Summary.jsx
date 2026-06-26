@@ -1,4 +1,4 @@
-import { STOP_META, fmtTime } from "../lib/constants";
+import { STOP_META, fmtTime } from "../../lib/constants";
 
 function Stat({ label, value, sub }) {
   return (

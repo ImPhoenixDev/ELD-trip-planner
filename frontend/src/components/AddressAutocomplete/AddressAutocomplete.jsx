@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { suggestPlaces } from "../lib/api";
+import { suggestPlaces } from "../../lib/api";
 
 const DEBOUNCE_MS = 250;
 

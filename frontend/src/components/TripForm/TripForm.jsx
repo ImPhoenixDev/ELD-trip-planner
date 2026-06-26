@@ -1,5 +1,5 @@
 import { useState } from "react";
-import AddressAutocomplete from "./AddressAutocomplete";
+import AddressAutocomplete from "../AddressAutocomplete";
 
 const EXAMPLES = [
   {
