@@ -59,9 +59,47 @@ and is fully unit-tested in [`backend/trips/tests.py`](backend/trips/tests.py).
 
 ```
 React (Vite) ── POST /api/plan-trip/ ──> Django REST API
-                                          ├─ geo.py   (geocode + truck routing)
-                                          └─ hos.py   (HOS simulation -> segments -> daily logs)
+             ── GET  /api/geocode/suggest/    ├─ geo.py   (geocode + autocomplete + truck routing)
+                                              └─ hos.py   (HOS simulation -> segments -> daily logs)
         <── route geometry, stops, per-day log sheets (JSON) ──┘
+```
+
+### Project structure
+
+```
+backend/
+  config/            # Django project (settings, urls, wsgi)
+  trips/
+    services/
+      geo.py         # geocoding, autocomplete, routing (ORS + OSM fallbacks)
+      hos.py         # Hours-of-Service engine
+    views.py         # API endpoints (throttled)
+    tests.py         # HOS unit tests
+frontend/
+  src/
+    components/      # one directory per component (Component.jsx + index.js [+ .test.jsx, styles])
+      AddressAutocomplete/
+      ErrorBoundary/
+      LogSheet/
+      MapView/
+      Summary/
+      TripForm/
+    lib/             # api client, route math, constants
+vercel.json          # Vercel Services config (frontend + backend in one project)
+render.yaml          # alternative: backend-only deploy on Render
+```
+
+Each component lives in its own folder with an `index.js` barrel, so per-component
+styles (`Component.module.css`) and tests (`Component.test.jsx`) can be colocated.
+
+## Testing
+
+```bash
+# Backend (HOS engine)
+cd backend && python manage.py test trips
+
+# Frontend (Jest + React Testing Library)
+cd frontend && npm test
 ```
 
 ## Local development
@@ -92,6 +130,9 @@ cp .env.example .env            # VITE_API_BASE_URL=http://localhost:8000
 npm run dev                     # http://localhost:5173
 ```
 
+Alternatively, leave `VITE_API_BASE_URL` empty to use the Vite dev proxy
+(`/api` → `localhost:8000`), which mirrors the same-origin production setup.
+
 ## Environment variables
 
 **Backend**
@@ -109,25 +150,32 @@ npm run dev                     # http://localhost:5173
 
 | Variable | Purpose |
 | --- | --- |
-| `VITE_API_BASE_URL` | Base URL of the Django API |
+| `VITE_API_BASE_URL` | Base URL of the Django API. Leave empty for same-origin (`/api`) deploys or the Vite dev proxy. |
 
 ## Deployment
 
-### Backend → Render
+### Primary: both services on Vercel (one project)
 
-The repo includes [`render.yaml`](render.yaml) and
-[`backend/build.sh`](backend/build.sh).
+The repo's root [`vercel.json`](vercel.json) uses Vercel **Services** to deploy the
+Vite frontend at `/` and the Django backend at `/api` in a single project — same
+origin, so no CORS needed.
 
 1. Push this repo to GitHub.
-2. On Render: **New → Blueprint**, select the repo. Render reads `render.yaml`.
-3. Set `ORS_API_KEY` (recommended) and `CORS_ALLOWED_ORIGINS` (your Vercel URL).
-4. Build runs `./build.sh`; start runs `gunicorn config.wsgi:application`.
+2. On Vercel: **New Project**, import the repo. Keep **Root Directory** at the repo
+   root (not `frontend`). Set the framework preset to **Services** if offered.
+3. Add environment variables:
+   - `ORS_API_KEY` — OpenRouteService key (recommended for accurate routing)
+   - `DJANGO_DEBUG` = `False`
+   - `DJANGO_SECRET_KEY` = a long random string
+   - `VITE_API_BASE_URL` = *(empty)* so the frontend calls `/api` on the same origin
+4. Deploy.
 
-### Frontend → Vercel
+### Alternative: backend on Render
 
-1. On Vercel: **New Project**, import the repo, set **Root Directory** to `frontend`.
-2. Add env var `VITE_API_BASE_URL` = your Render API URL.
-3. Deploy. `*.vercel.app` origins are already allowed by the backend's CORS regex.
+The repo also includes [`render.yaml`](render.yaml) and [`backend/build.sh`](backend/build.sh)
+for deploying just the backend on Render (with the frontend on Vercel pointing
+`VITE_API_BASE_URL` at the Render URL). `*.vercel.app` origins are allowed by the
+backend's CORS regex.
 
 ## Notes & limitations
 
