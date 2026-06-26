@@ -85,7 +85,7 @@ export default function MapView({ data }) {
             <Popup>
               <strong>{meta.label}</strong>
               <br />
-              {m.label}
+              {m.location || m.label}
               {m.time && (
                 <>
                   <br />
@@ -103,6 +103,12 @@ export default function MapView({ data }) {
           <Marker key={s.id} position={[s.lat, s.lng]} icon={pinIcon(meta)}>
             <Popup>
               <strong>{meta.label}</strong>
+              {s.location && (
+                <>
+                  <br />
+                  {s.location}
+                </>
+              )}
               <br />
               {fmtTime(s.time)} · ~{Math.round(s.miles)} mi
               <br />

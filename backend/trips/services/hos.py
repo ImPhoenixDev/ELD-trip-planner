@@ -294,6 +294,7 @@ def build_logs(segments: List[Segment], start_dt: datetime) -> List[dict]:
         miles_today = 0.0
 
         cursor_min = 0  # minutes from midnight
+        prev_status = None
         for status, s_dt, e_dt, label, kind, sm, em in sorted(day_pieces, key=lambda p: p[1]):
             start_m = int(round((s_dt - day_start).total_seconds() / 60))
             end_m = int(round((e_dt - day_start).total_seconds() / 60))
@@ -304,8 +305,19 @@ def build_logs(segments: List[Segment], start_dt: datetime) -> List[dict]:
             totals[status] += (end_m - start_m) / 60.0
             if status == DRIVING:
                 miles_today += em - sm
-            if kind in {"pickup", "dropoff", "fuel", "break", "rest", "restart"}:
-                remarks.append({"time": _fmt_clock(s_dt), "label": label, "kind": kind})
+            # FMCSA requires a remark at every change of duty status.
+            if status != prev_status:
+                remarks.append(
+                    {
+                        "time": s_dt.isoformat(),
+                        "clock": _fmt_clock(s_dt),
+                        "status": status,
+                        "label": label,
+                        "kind": kind,
+                        "miles": round(sm, 1),
+                    }
+                )
+            prev_status = status
             cursor_min = max(cursor_min, end_m)
 
         if cursor_min < 24 * 60:

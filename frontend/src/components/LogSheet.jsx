@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
-import { STATUS_ROWS, STATUS_INDEX, STOP_META, fmtDate } from "../lib/constants";
+import { STATUS_ROWS, STATUS_INDEX, fmtDate } from "../lib/constants";
+
+const STATUS_COLOR = Object.fromEntries(STATUS_ROWS.map((r) => [r.key, r.color]));
 
 // Fixed internal drawing resolution; the canvas scales responsively via CSS.
 const W = 920;
@@ -138,26 +140,39 @@ export default function LogSheet({ log }) {
   }, [log]);
 
   const totalMiles = log.miles ?? 0;
+  const t = log.totals || {};
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card sm:p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-bold text-slate-900">
-            Day {log.day} <span className="font-normal text-slate-500">· {fmtDate(log.date)}</span>
-          </h3>
-          <p className="text-xs text-slate-500">Driver's Daily Log (24-hour grid)</p>
-        </div>
-        <div className="flex gap-4 text-right text-xs">
+      {/* Official RODS header block */}
+      <div className="mb-3 border-b border-slate-200 pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <div className="font-semibold text-slate-900">{totalMiles.toLocaleString()} mi</div>
-            <div className="text-slate-500">driven</div>
+            <h3 className="text-sm font-bold uppercase tracking-wide text-slate-900">
+              Driver's Daily Log
+            </h3>
+            <p className="text-[11px] text-slate-500">
+              One calendar day — 24 hours · U.S. Department of Transportation
+            </p>
           </div>
-          <div>
-            <div className="font-semibold text-slate-900">{log.total_on_duty?.toFixed(2)} h</div>
-            <div className="text-slate-500">on duty</div>
+          <div className="text-right">
+            <div className="text-sm font-bold text-slate-900">
+              Day {log.day} · {fmtDate(log.date)}
+            </div>
+            <div className="text-[11px] text-slate-500">Time base: home terminal</div>
           </div>
         </div>
+
+        <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
+          <Field label="Total miles driving today" value={`${totalMiles.toLocaleString()} mi`} />
+          <Field label="Total on-duty" value={`${log.total_on_duty?.toFixed(2)} h`} />
+          <Field label="Carrier" value="" />
+          <Field label="Main office address" value="" />
+          <Field label="Truck / tractor & trailer no." value="" />
+          <Field label="Shipping doc no. / commodity" value="" />
+          <Field label="Co-driver" value="None" />
+          <Field label="24-hour period starting time" value="Midnight (00:00)" />
+        </dl>
       </div>
 
       <div className="w-full overflow-x-auto">
@@ -170,24 +185,46 @@ export default function LogSheet({ log }) {
 
       {log.remarks?.length > 0 && (
         <div className="mt-3 border-t border-dashed border-slate-200 pt-3">
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Remarks</p>
-          <div className="flex flex-wrap gap-1.5">
-            {log.remarks.map((r, idx) => {
-              const meta = STOP_META[r.kind] || { color: "#64748b" };
-              return (
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Remarks <span className="font-normal normal-case text-slate-400">(location at each duty change)</span>
+          </p>
+          <ul className="space-y-1">
+            {log.remarks.map((r, idx) => (
+              <li key={idx} className="flex items-baseline gap-2 text-xs text-slate-700">
                 <span
-                  key={idx}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs text-slate-700 ring-1 ring-slate-200"
-                >
-                  <span className="h-2 w-2 rounded-full" style={{ background: meta.color }} />
-                  <span className="font-mono text-slate-500">{r.time}</span>
-                  {r.label}
-                </span>
-              );
-            })}
-          </div>
+                  className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: STATUS_COLOR[r.status] || "#64748b" }}
+                />
+                <span className="w-16 shrink-0 font-mono text-slate-500">{r.clock}</span>
+                <span className="font-medium text-slate-800">{r.location || "—"}</span>
+                <span className="text-slate-400">·</span>
+                <span className="text-slate-600">{r.label}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
+
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-slate-200 pt-3 text-[11px] text-slate-500">
+        <span>I certify that these entries are true and correct.</span>
+        <span className="min-w-[160px] flex-1 border-b border-slate-300 text-right text-slate-400">
+          Driver's signature
+        </span>
+        <span className="font-mono text-slate-600">
+          Total: {(t.off_duty + t.sleeper + t.driving + t.on_duty).toFixed(2)} = 24.00 h
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, value }) {
+  return (
+    <div>
+      <dt className="text-[10px] uppercase tracking-wide text-slate-400">{label}</dt>
+      <dd className="border-b border-slate-200 pb-0.5 font-medium text-slate-800">
+        {value || <span className="text-slate-300">—</span>}
+      </dd>
     </div>
   );
 }

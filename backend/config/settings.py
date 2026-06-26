@@ -116,6 +116,10 @@ CORS_ALLOWED_ORIGINS = [
 # Allow any *.vercel.app preview/prod deploy by default.
 CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.vercel\.app$"]
 
+# In local development, allow any localhost port (Vite may pick 5173/5174/...).
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+
 CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith("https")]
 if RENDER_EXTERNAL_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")

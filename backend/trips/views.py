@@ -1,12 +1,20 @@
 """API views for the ELD Trip Planner."""
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from trips.services.geo import GeoError, directions, geocode
+from trips.services.geo import (
+    GeoError,
+    build_cumulative,
+    directions,
+    geocode,
+    point_at_miles,
+    reverse_geocode,
+)
 from trips.services.hos import plan_trip
 
 
@@ -22,6 +30,45 @@ def _parse_start(value):
 @api_view(["GET"])
 def health(_request):
     return Response({"status": "ok"})
+
+
+def _attach_locations(plan, geometry, leg_a_miles, total_miles, places):
+    """Reverse-geocode every duty-change point to a 'City, ST' string.
+
+    Resolves each unique mileage once, concurrently, then annotates stops,
+    log remarks, and the named places.
+    """
+    if not geometry:
+        return
+    cum = build_cumulative(geometry)
+
+    needed = {0.0, round(leg_a_miles), round(total_miles)}
+    for stop in plan.get("stops", []):
+        needed.add(round(stop["miles"]))
+    for log in plan.get("logs", []):
+        for remark in log.get("remarks", []):
+            needed.add(round(remark["miles"]))
+
+    def resolve(miles):
+        pt = point_at_miles(geometry, cum, miles)
+        if not pt:
+            return miles, ""
+        return miles, (reverse_geocode(pt[0], pt[1]) or "")
+
+    cache = {}
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        for miles, label in pool.map(resolve, sorted(needed)):
+            cache[miles] = label
+
+    for stop in plan.get("stops", []):
+        stop["location"] = cache.get(round(stop["miles"]), "")
+    for log in plan.get("logs", []):
+        for remark in log.get("remarks", []):
+            remark["location"] = cache.get(round(remark["miles"]), "")
+
+    places["current"]["location"] = cache.get(0.0, "")
+    places["pickup"]["location"] = cache.get(round(leg_a_miles), "")
+    places["dropoff"]["location"] = cache.get(round(total_miles), "")
 
 
 @api_view(["POST"])
@@ -70,6 +117,14 @@ def plan_trip_view(request):
         leg_a_miles=leg_a_miles,
         current_cycle_hours=cycle_hours,
         start_dt=start_dt,
+    )
+
+    _attach_locations(
+        plan,
+        route["geometry"],
+        leg_a_miles,
+        route["distance_miles"],
+        {"current": current_pt, "pickup": pickup_pt, "dropoff": dropoff_pt},
     )
 
     return Response(

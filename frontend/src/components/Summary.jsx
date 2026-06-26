@@ -44,7 +44,8 @@ export default function Summary({ data }) {
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: meta.color }} />
                   <span className="font-mono text-xs text-slate-500">{fmtTime(e.time)}</span>
                   <span className="text-slate-700">{meta.label || e.label}</span>
-                  <span className="ml-auto text-xs text-slate-400">~{Math.round(e.miles)} mi</span>
+                  {e.location && <span className="truncate text-xs text-slate-400">{e.location}</span>}
+                  <span className="ml-auto shrink-0 text-xs text-slate-400">~{Math.round(e.miles)} mi</span>
                 </li>
               );
             })}
