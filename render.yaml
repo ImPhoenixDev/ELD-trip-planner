@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: eld-trip-planner-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application"
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ORS_API_KEY
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
