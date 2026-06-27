@@ -1,0 +1,129 @@
+---
+description: React frontend standards — structure, patterns, and conventions for ELD Trip Planner
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Frontend — ELD Trip Planner
+
+Senior React standards for this repo. **Current stack:** React 19, Vite, Tailwind, TypeScript (`.tsx`/`.ts`), Jest + RTL, raw `fetch` in `lib/api.ts`. **Target stack** (adopt incrementally): TanStack Query, Zustand, React Hook Form, shadcn/ui.
+
+## Style
+
+- Direct and concise; no comments unless logic is non-obvious
+- Single quotes for strings; 2-space indent; no trailing whitespace
+- Prefer `const`; use `??` and optional chaining over `||` when empty string matters
+
+## Folder structure
+
+```
+frontend/src/
+  app/              # App shell, layout, providers (App.tsx, main.tsx)
+  features/         # Feature modules (e.g. trip-planner/)
+    trip-planner/
+      components/   # Feature-only UI
+      hooks/        # Feature data + form hooks
+      api/          # Feature API calls
+      types/        # TS types or JSDoc typedefs
+  components/       # Shared UI only (AddressAutocomplete, ErrorBoundary)
+  lib/              # Pure utilities (route math, formatters)
+  hooks/            # Shared hooks
+  styles/           # Global CSS only
+```
+
+- One folder per component: `ComponentName/ComponentName.tsx`, `index.ts`, optional `ComponentName.test.tsx`, optional `ComponentName.module.css`
+- **Do not** put feature logic in `App.tsx` — extract layout, empty state, and data hooks
+- **Do not** mix canvas/math/rendering in one 200+ line file — extract pure functions to `lib/` or `*.utils.ts`
+
+## Components
+
+- **Functional components + hooks only** — no class components
+- Error boundaries: use `react-error-boundary` via `components/ErrorBoundary/ErrorBoundary.tsx` (function wrapper + `FallbackComponent`)
+- Named exports for utilities; default export for the main component in each folder
+- Import order: React → third-party → `@/` or `lib/` → relative
+- Props: TypeScript interfaces in `types/` or colocated with the component
+- Composition over prop drilling; custom hooks for reusable stateful logic
+- Error boundaries around result panels that depend on API shape
+
+## State & data
+
+| Concern | Current | Target |
+|--------|---------|--------|
+| Server data (plan trip, suggest) | `lib/api.ts` + `useState` in hooks | TanStack Query (`useQuery` / `useMutation`) |
+| Form state | Local state in TripForm | React Hook Form |
+| Global UI state | Lifted to App | Zustand slice if shared across features |
+| URL state | N/A (single page) | React Router when routes are added |
+
+- API calls live in `features/*/api/` or `lib/api.ts`, never inside presentational components
+- Handle loading, error, and empty states explicitly; user-facing messages only (no stack traces)
+
+## Styling
+
+- Tailwind utility classes; mobile-first responsive breakpoints
+- Shared field styles via `@layer components` in `index.css` (`.field-label`, `.field-input`)
+- No inline `style={{}}` except dynamic values (map marker colors, canvas)
+- shadcn/ui + Radix when adding new primitives — copy into `components/ui/`, don't npm-install the package
+
+## Performance
+
+- `useMemo` / `useCallback` only when profiling or eslint requires it (stable deps for geometry, cumulative routes)
+- Side effects in `useEffect`, never in `useMemo`
+- `React.lazy` + `Suspense` for heavy routes (MapView + Leaflet) when bundle size matters
+- Debounce + abort autocomplete requests (see AddressAutocomplete)
+
+## Testing
+
+- Colocate: `ComponentName.test.tsx` next to the component
+- Jest + React Testing Library (current); Vitest is acceptable when migrating
+- Test behavior and accessibility roles, not implementation details
+- Mock `lib/api` at module boundary, not `fetch` globally
+
+## Accessibility
+
+- Semantic HTML (`form`, `label`, `button`, `ul`/`li` for lists)
+- Combobox pattern: `role="combobox"`, `aria-expanded`, `aria-controls`, `listbox`/`option`
+- Canvas: `aria-label` describing the log day
+- Keyboard: autocomplete supports ↑/↓, Enter, Escape
+
+## Security
+
+- Never inject user/API strings into `innerHTML` or Leaflet `html` templates without escaping
+- Validate inputs client-side; server remains source of truth
+
+## Anti-patterns (fix when touching the file)
+
+```jsx
+// BAD — god App with fetch, layout, and sub-views
+export default function App() {
+  const [data, setData] = useState(null);
+  async function handleSubmit() { /* fetch */ }
+  return (/* 150 lines */);
+}
+
+// GOOD — thin App, feature hook, colocated views
+export default function App() {
+  const trip = useTripPlanner();
+  return <TripPlannerLayout {...trip} />;
+}
+```
+
+```jsx
+// BAD — side effect in useMemo
+useMemo(() => map.fitBounds(points), [map, points]);
+
+// GOOD
+useEffect(() => { map.fitBounds(points); }, [map, points]);
+```
+
+```jsx
+// BAD — 200 lines of canvas math inside the component file
+function drawSheet(canvas, log) { /* ... */ }
+
+// GOOD — lib/log-sheet-draw.ts (pure) + thin LogSheet.tsx
+```
+
+## File naming
+
+- Components: PascalCase folder + file (`TripForm/TripForm.tsx`)
+- Utilities/hooks: camelCase (`useTripPlanner.ts`, `formatClock.ts`)
+- Tests: `*.test.tsx` beside source
