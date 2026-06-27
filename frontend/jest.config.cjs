@@ -7,5 +7,5 @@ module.exports = {
     // Static assets resolve to a stub string.
     "\\.(png|jpe?g|gif|svg|webp|avif)$": "<rootDir>/test/fileMock.cjs",
   },
-  testMatch: ["<rootDir>/src/**/*.test.{js,jsx}"],
+  testMatch: ["<rootDir>/src/**/*.test.{js,jsx,ts,tsx}"],
 };

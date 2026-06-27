@@ -8,7 +8,7 @@ breaks, fuel stops and rests, and draws a filled-out log sheet for each day of
 the trip.
 
 - **Backend:** Django + Django REST Framework (pure-Python Hours-of-Service engine)
-- **Frontend:** React (Vite) + Tailwind CSS + React-Leaflet (OpenStreetMap)
+- **Frontend:** React (Vite, TypeScript) + Tailwind CSS + React-Leaflet (OpenStreetMap)
 - **Routing / geocoding:** OpenRouteService (free key), with keyless OpenStreetMap
   (Nominatim + OSRM) fallbacks so the app works even without an API key.
 
@@ -77,20 +77,18 @@ backend/
     tests.py         # HOS unit tests
 frontend/
   src/
-    components/      # one directory per component (Component.jsx + index.js [+ .test.jsx, styles])
-      AddressAutocomplete/
-      ErrorBoundary/
-      LogSheet/
-      MapView/
-      Summary/
-      TripForm/
-    lib/             # api client, route math, constants
+    app/               # App shell (App.tsx, AppHeader, AppFooter)
+    features/
+      trip-planner/    # Trip form, map, logs, hooks
+    components/        # Shared UI (AddressAutocomplete, ErrorBoundary)
+    lib/               # api client, route math, constants, canvas drawing
+    types/             # Shared TypeScript types
 vercel.json          # Vercel Services config (frontend + backend in one project)
 render.yaml          # alternative: backend-only deploy on Render
 ```
 
-Each component lives in its own folder with an `index.js` barrel, so per-component
-styles (`Component.module.css`) and tests (`Component.test.jsx`) can be colocated.
+Each component lives in its own folder with an `index.ts` barrel, so per-component
+styles (`Component.module.css`) and tests (`Component.test.tsx`) can be colocated.
 
 ## Testing
 
@@ -126,7 +124,7 @@ python manage.py test trips
 ```bash
 cd frontend
 npm install
-cp .env.example .env            # VITE_API_BASE_URL=http://localhost:8000
+cp .env.example .env            # leave VITE_API_BASE_URL empty to use the dev proxy
 npm run dev                     # http://localhost:5173
 ```
 
