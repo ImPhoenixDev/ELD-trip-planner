@@ -8,16 +8,6 @@ from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 
-MAX_LOCATION_LEN = 160
-
-
-class SuggestRateThrottle(AnonRateThrottle):
-    scope = "suggest"
-
-
-class PlanRateThrottle(AnonRateThrottle):
-    scope = "plan"
-
 from trips.services.geo import (
     GeoError,
     autocomplete,
@@ -28,6 +18,16 @@ from trips.services.geo import (
     reverse_geocode,
 )
 from trips.services.hos import plan_trip
+
+MAX_LOCATION_LEN = 160
+
+
+class SuggestRateThrottle(AnonRateThrottle):
+    scope = "suggest"
+
+
+class PlanRateThrottle(AnonRateThrottle):
+    scope = "plan"
 
 
 def _parse_start(value):
