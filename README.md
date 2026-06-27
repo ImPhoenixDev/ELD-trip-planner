@@ -11,6 +11,9 @@ the trip.
 - **Frontend:** React (Vite, TypeScript) + Tailwind CSS + React-Leaflet (OpenStreetMap)
 - **Routing / geocoding:** OpenRouteService (free key), with keyless OpenStreetMap
   (Nominatim + OSRM) fallbacks so the app works even without an API key.
+- **Installable PWA:** web app manifest + a hand-written service worker that
+  precaches the app shell and caches map tiles, so the app is installable to a
+  home screen and keeps working offline (API calls always go to the network).
 
 ## Live demo
 
@@ -130,6 +133,16 @@ npm run dev                     # http://localhost:5173
 
 Alternatively, leave `VITE_API_BASE_URL` empty to use the Vite dev proxy
 (`/api` → `localhost:8000`), which mirrors the same-origin production setup.
+
+The service worker is only registered in production builds (so it never caches
+stale code during development). To test the installable PWA locally:
+
+```bash
+npm run build && npm run preview   # http://localhost:4173
+```
+
+App icons are generated from `public/app-icon.svg` with
+`npm run generate-pwa-assets`; commit the resulting PNGs in `public/`.
 
 ## Environment variables
 
